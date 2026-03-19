@@ -10,6 +10,4 @@ RUN ./gradlew classes --no-daemon
 
 EXPOSE 8080
 
-COPY entrypoint-dev.sh ./
-RUN chmod +x entrypoint-dev.sh
-ENTRYPOINT ["./entrypoint-dev.sh"]
+CMD ["bash", "-c", "./gradlew classes --continuous --no-daemon & ./gradlew bootRun --no-daemon"]
