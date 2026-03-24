@@ -1,0 +1,103 @@
+/* 1. 空間の定義：漆黒の宇宙やサーバー内部をイメージ */
+:root {
+    --r: #ff003c; /* ネオンレッド */
+    --g: #00ff66; /* ネオングリーン */
+    --b: #0066ff; /* ネオンブルー */
+    --glass: rgba(255, 255, 255, 0.05);
+}
+
+body {
+    background-color: #020205;
+    color: #e0e0e0;
+    font-family: 'Share Tech Mono', monospace; /* デジタル風フォント */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden;
+}
+
+/* 2. 外周マップ：RGBのノードが浮遊するエリア */
+.map-container {
+    position: relative;
+    width: 400px;
+    height: 500px;
+    border: 1px solid rgba(0, 242, 255, 0.2);
+    background: radial-gradient(circle at center, #0a0a1a 0%, #020205 100%);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 1);
+}
+
+/* 3. ノード（マス目）：光の三原色で色分け */
+.node {
+    position: absolute;
+    width: 35px;
+    height: 12px;
+    background: transparent;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* 各色の発光定義 */
+.node.red   { border-left: 4px solid var(--r); box-shadow: -5px 0 10px rgba(255,0,60,0.3); }
+.node.green { border-left: 4px solid var(--g); box-shadow: -5px 0 10px rgba(0,255,102,0.3); }
+.node.blue  { border-left: 4px solid var(--b); box-shadow: -5px 0 10px rgba(0,102,255,0.3); }
+
+/* アクティブ（選択中）の演出：過負荷状態 */
+.node.active {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.3) translateX(5px);
+    filter: brightness(2) drop-shadow(0 0 8px currentColor);
+    opacity: 1 !important;
+}
+
+/* 4. 中央ディスプレイ：ホログラムのような質感 */
+.central-display {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    padding: 20px;
+    background: var(--glass);
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(8px); /* グラスモーフィズム */
+    border-radius: 50%;
+    width: 180px;
+    height: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 2px double rgba(0, 242, 255, 0.3);
+}
+
+/* 5. インタラクティブ要素：サイバーボタン */
+button {
+    background: none;
+    border: 1px solid #00f2ff;
+    color: #00f2ff;
+    padding: 10px 20px;
+    font-family: inherit;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: 0.2s;
+}
+
+button::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0,242,255,0.4), transparent);
+    transition: 0.5s;
+}
+
+button:hover::before {
+    left: 100%;
+}
+
+button:hover {
+    box-shadow: 0 0 15px #00f2ff;
+    background: rgba(0, 242, 255, 0.1);
+}

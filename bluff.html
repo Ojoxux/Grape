@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGB CYBER BLUFF</title>
+    <style>
+        :root {
+            --neon-red: #ff003c;
+            --neon-green: #00ff66;
+            --neon-blue: #0066ff;
+            --bg-dark: #050508;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* メインコンテナ */
+        .game-frame {
+            position: relative;
+            width: 450px;
+            height: 650px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: radial-gradient(circle at center, #1a1a2e 0%, #050508 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        /* RGBマップ（外周ノード） */
+        .map-container {
+            position: relative;
+            width: 350px;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .node {
+            position: absolute;
+            width: 30px;
+            height: 15px;
+            border-radius: 2px;
+            opacity: 0.4;
+            transition: all 0.3s ease;
+        }
+
+        .node.red { border: 1px solid var(--neon-red); box-shadow: 0 0 5px var(--neon-red); }
+        .node.green { border: 1px solid var(--neon-green); box-shadow: 0 0 5px var(--neon-green); }
+        .node.blue { border: 1px solid var(--neon-blue); box-shadow: 0 0 5px var(--neon-blue); }
+
+        .node.active {
+            opacity: 1;
+            transform: scale(1.2);
+            filter: brightness(1.5);
+        }
+
+        /* 中央のホログラム表示 */
+        .central-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 200px;
+        }
+
+        .bid-info {
+            font-size: 0.8rem;
+            color: #aaa;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .bid-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 15px #fff;
+        }
+
+        /* 操作パネル */
+        .controls {
+            margin-top: auto;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+
+        .dice-display {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .die {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(255,255,255,0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid #fff;
+            color: #fff;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 1px;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        .btn-call { border-color: var(--neon-red); color: var(--neon-red); }
+        .btn-call:hover { background: var(--neon-red); color: #fff; }
+
+        input, select {
+            background: #000;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-frame">
+    <div class="map-container" id="map">
+        <div class="central-display">
+            <div class="bid-info">CURRENT PROTOCOL</div>
+            <div class="bid-value" id="display-val">00</div>
+            <div id="display-count" style="color: #888;">WAITING...</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="dice-display" id="my-dice">
+            </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <input type="number" id="input-count" value="3" min="1" style="width: 50px;">
+            <select id="input-val">
+                <option value="1">VAL: 1 (★)</option>
+                <option value="2">VAL: 2</option>
+                <option value="3">VAL: 3</option>
+                <option value="4">VAL: 4</option>
+                <option value="5">VAL: 5</option>
+                <option value="6">VAL: 6</option>
+            </select>
+        </div>
+
+        <div class="btn-group">
+            <button onclick="makeBid()">Update Upload</button>
+            <button class="btn-call" onclick="callBluff()">Execute Scan</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const map = document.getElementById('map');
+    const colors = ['red', 'green', 'blue'];
+    let myDice = [];
+    let cpuDice = [];
+
+    // 1. マップノードの生成 (画像の外周を再現)
+    function initMap() {
+        const totalNodes = 20;
+        const radiusX = 150;
+        const radiusY = 180;
+
+        for (let i = 0; i < totalNodes; i++) {
+            const node = document.createElement('div');
+            const color = colors[i % 3];
+            node.className = `node ${color}`;
+            node.id = `node-${i}`;
+
+            // 円形に配置
+            const angle = (i / totalNodes) * Math.PI * 2;
+            const x = 160 + Math.cos(angle) * radiusX;
+            const y = 190 + Math.sin(angle) * radiusY;
+
+            node.style.left = `${x}px`;
+            node.style.top = `${y}px`;
+            node.style.transform = `rotate(${angle}rad)`;
+            
+            map.appendChild(node);
+        }
+    }
+
+    // 2. ゲーム初期化
+    function initGame() {
+        myDice = Array.from({length: 5}, () => Math.floor(Math.random() * 6) + 1).sort();
+        cpuDice = Array.from({length: 5}, () => Math.floor(Math.random() * 6) + 1);
+        
+        const diceContainer = document.getElementById('my-dice');
+        diceContainer.innerHTML = '';
+        myDice.forEach(val => {
+            const d = document.createElement('div');
+            d.className = 'die';
+            d.style.borderColor = getNeonColor(val);
+            d.style.color = getNeonColor(val);
+            d.innerText = val === 1 ? '★' : val;
+            diceContainer.appendChild(d);
+        });
+    }
+
+    function getNeonColor(val) {
+        if (val <= 2) return 'var(--neon-red)';
+        if (val <= 4) return 'var(--neon-green)';
+        return 'var(--neon-blue)';
+    }
+
+    // 3. 宣言 (Bid) アクション
+    function makeBid() {
+        const count = document.getElementById('input-count').value;
+        const val = document.getElementById('input-val').value;
+        
+        document.getElementById('display-val').innerText = val.padStart(2, '0');
+        document.getElementById('display-count').innerText = `${count} PACKETS DETECTED`;
+        
+        // マップの色を同期
+        const targetClass = (val <= 2) ? 'red' : (val <= 4) ? 'green' : 'blue';
+        document.querySelectorAll('.node').forEach(n => {
+            n.classList.toggle('active', n.classList.contains(targetClass));
+        });
+    }
+
+    // 4. ブラフ判定 (Call)
+    function callBluff() {
+        const bidCount = parseInt(document.getElementById('input-count').value);
+        const bidVal = parseInt(document.getElementById('input-val').value);
+        
+        const allDice = [...myDice, ...cpuDice];
+        const actualCount = allDice.filter(d => d === bidVal || d === 1).length;
+
+        const result = actualCount >= bidCount ? "SCAN FAILED: DATA VALID" : "SCAN SUCCESS: BLUFF DETECTED";
+        alert(`CPU DATA: ${cpuDice.join(' ')}\nTOTAL (inc. ★): ${actualCount}\n\n${result}`);
+        location.reload();
+    }
+
+    initMap();
+    initGame();
+</script>
+
+</body>
+</html>
