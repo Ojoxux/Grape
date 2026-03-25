@@ -1,5 +1,5 @@
 services:
-  backend:
+  bluff-bb:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
