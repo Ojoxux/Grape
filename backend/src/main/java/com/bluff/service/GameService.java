@@ -26,7 +26,7 @@ public class GameService {
         this(repository, new Random());
     }
 
-    GameService(GameRepository repository, Random random) {
+    public GameService(GameRepository repository, Random random) {
         this.repository = repository;
         this.cpuStrategy = new CpuStrategy(random);
     }
