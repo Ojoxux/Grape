@@ -54,6 +54,15 @@ class GameApiIntegrationTest {
     }
 
     @Test
+    void postGames_invalidCpuCountSix_returns400() throws Exception {
+        mockMvc.perform(
+                        post("/games")
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content("{\"cpuCount\":6}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void getGame_unknown_returns404() throws Exception {
         mockMvc.perform(get("/games/no-such-game")).andExpect(status().isNotFound());
     }

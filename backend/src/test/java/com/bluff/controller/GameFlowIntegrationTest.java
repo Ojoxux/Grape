@@ -51,7 +51,7 @@ class GameFlowIntegrationTest {
 
     @Test
     void happyPath_challenge_changesDiceOrResetsBid() throws Exception {
-        CreatedGame cg = createGame(1);
+        CreatedGame cg = createGame(2);
         start(cg.gameId(), cg.humanPlayerId());
 
         JsonNode before = getGame(cg.gameId(), cg.humanPlayerId());
@@ -141,7 +141,7 @@ class GameFlowIntegrationTest {
 
     @Test
     void error_challengeWithoutBid_returns409() throws Exception {
-        CreatedGame cg = createGame(1);
+        CreatedGame cg = createGame(2);
         start(cg.gameId(), cg.humanPlayerId());
 
         boolean saw = false;
