@@ -1,6 +1,6 @@
 package com.bluff.service;
 
-import com.bluff.cpu.SimpleCpuTurnExecutor;
+import com.bluff.cpu.CpuStrategy;
 import com.bluff.model.Action;
 import com.bluff.model.Bid;
 import com.bluff.model.Game;
@@ -19,7 +19,7 @@ import java.util.UUID;
 public class GameService {
 
     private final GameRepository repository;
-    private final Random random;
+    private final CpuStrategy cpuStrategy;
 
     @Autowired
     public GameService(GameRepository repository) {
@@ -28,7 +28,7 @@ public class GameService {
 
     GameService(GameRepository repository, Random random) {
         this.repository = repository;
-        this.random = random;
+        this.cpuStrategy = new CpuStrategy(random);
     }
 
     public CreateGameResult createGame(String name, int cpuCount) {
@@ -104,7 +104,7 @@ public class GameService {
                 repository.save(game);
                 return;
             }
-            SimpleCpuTurnExecutor.executeTurn(game, random);
+            cpuStrategy.executeTurn(game);
             if (game.getState() == GameState.FINISHED) {
                 repository.deleteById(game.getId());
                 return;
