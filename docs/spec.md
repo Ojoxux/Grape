@@ -226,16 +226,18 @@ HTTPとの対応
 
 ### 6.1 `Game`（ゲーム全体）
 
-| 名前                     | 型               | 説明                                                                                                                     |
-| ------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `id`                     | String           | ゲームID（例: UUID）                                                                                                     |
-| `state`                  | GameState        | 3章のどれか                                                                                                              |
-| `players`                | List\<Player\>   | 参加した順。時計回りはこの順                                                                                             |
-| `currentPlayerIndex`     | int              | いま番の人（`players`の何番目か）。脱落は`nextTurn`で飛ばす                                                              |
-| `currentBid`             | Bidまたはなし    | 卓に出ている直近の宣言。ラウンド開始直後はなし                                                                           |
-| `lastBidPlayerId`        | Stringまたはなし | いちばん最後にBidした人（Challengeの罰・次ラウンド先攻で必要）                                                           |
-| `hostPlayerId`           | String           | 部屋を作った人（ホスト）のプレイヤーID                                                                                   |
-| `pendingOpeningPlayerId` | Stringまたはなし | Challenge直後だけ使う。次ラウンドの先攻のプレイヤーID（2.9）。`resolveRound`で`currentPlayerIndex`に反映したらnullに戻す |
+| 名前                     | 型                   | 説明                                                                                                                     |
+| ------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `id`                     | String               | ゲームID（例: UUID）                                                                                                     |
+| `state`                  | GameState            | 3章のどれか                                                                                                              |
+| `players`                | List\<Player\>       | 参加した順。時計回りはこの順                                                                                             |
+| `currentPlayerIndex`     | int                  | いま番の人（`players`の何番目か）。脱落は`nextTurn`で飛ばす                                                              |
+| `currentBid`             | Bidまたはなし        | 卓に出ている直近の宣言。ラウンド開始直後はなし                                                                           |
+| `lastBidPlayerId`        | Stringまたはなし     | いちばん最後にBidした人（Challengeの罰・次ラウンド先攻で必要）                                                           |
+| `hostPlayerId`           | String               | 部屋を作った人（ホスト）のプレイヤーID                                                                                   |
+| `pendingOpeningPlayerId` | Stringまたはなし     | Challenge直後だけ使う。次ラウンドの先攻のプレイヤーID（2.9）。`resolveRound`で`currentPlayerIndex`に反映したらnullに戻す |
+| `actionLog`              | List\<TurnLogEntry\> | 全ラウンドの行動履歴（ゲーム開始から蓄積。6.5参照）                                                                      |
+| `currentRound`           | int                  | 現在のラウンド番号（1始まり。`resolveRound`でゲームが続く場合に+1する）                                                  |
 
 ### 6.2 `Player`（一人）
 
@@ -264,11 +266,29 @@ HTTPとの対応
 | `quantity` | Integer    | `BID`のとき必須    |
 | `face`     | Integer    | `BID`のとき必須    |
 
-### 6.5 CPUについて（サーバ側）
+### 6.5 `TurnLogEntry`（行動履歴の1エントリ）
 
-- `cpu == true`のプレイヤーは、クライアントが`/action`で送らない。サーバが現在のルールに従って`bid` / `challenge`を呼ぶ。
+ゲーム中の全アクション（人間・CPU問わず）を時系列で記録するためのデータ。`Game`の`actionLog`に蓄積する。
+
+| 名前                 | 型                | 説明                                                               |
+| -------------------- | ----------------- | ------------------------------------------------------------------ |
+| `round`              | int               | ラウンド番号（1始まり）                                            |
+| `playerId`           | String            | 行動したプレイヤーのID                                             |
+| `playerName`         | String            | 表示名（フロント側の利便性のため保持する）                         |
+| `type`               | String            | `"BID"` / `"CHALLENGE"` / `"ROUND_START"`                          |
+| `quantity`           | Integerまたはなし | BID時のみ                                                          |
+| `face`               | Integerまたはなし | BID時のみ                                                          |
+| `actualCount`        | Integerまたはなし | CHALLENGE時: 実際の個数 A（2.3の数え方で求めた値）                 |
+| `challengeResult`    | Stringまたはなし  | CHALLENGE時: `"BIDDER_LOSES"`/`"CHALLENGER_LOSES"`/`"EXACT_MATCH"` |
+| `penaltyDescription` | Stringまたはなし  | CHALLENGE時の罰の説明（例: "CPU 1 がダイス2個失う"）               |
+
+`ROUND_START`は新しいラウンドの開始を示すマーカー。ラウンド番号を区切りとして表示するために使う。`playerId`/`playerName`にはそのラウンドの先攻プレイヤーを入れる。
+
+### 6.6 CPUについて（サーバ側）
+
+- `cpu == true`のプレイヤーは、クライアントが`/action`で送らない。サーバが現在のルールに従って`bid`/`challenge`を呼ぶ。
 - CPUの賢さは実装任せ。Bidは2章2.5を満たすものから選ぶ。Challengeしたあとの罰は2章2.6（`A`と`Q`）。
-- 人間の手のあと、番がCPUのあいだはサーバ内で`bid` / `challenge`を進める。状態の確認は`GET /games/{id}`でよい。
+- 人間の手のあと、番がCPUのあいだはサーバ内で`bid`/`challenge`を進める。状態の確認は`GET /games/{id}`でよい。
 
 ---
 
@@ -307,6 +327,7 @@ HTTPとの対応
 - 全員に、持っている個数ぶん`dice`を振る（1〜5と6をランダム）
 - `currentPlayerIndex = 0`（始まった直後は全員いるので0でよい）
 - `currentBid`なし、`lastBidPlayerId`もなし、`pendingOpeningPlayerId`もなし
+- `currentRound = 1`、`actionLog`をクリア
 
 ### 7.3 `bid(String playerId, int quantity, int face)`（Bid）
 
@@ -321,6 +342,7 @@ HTTPとの対応
 
 - `currentBid`を更新
 - `lastBidPlayerId`を`playerId`にする
+- `actionLog`にBIDエントリを追加（`round`は`currentRound`、`type`は`"BID"`、`quantity`と`face`を記録）
 - `nextTurn()`する
 
 ### 7.4 `challenge(String playerId)`（Challenge）
@@ -343,7 +365,8 @@ HTTPとの対応
    - `A < Q` … 基本は宣言者。宣言者がeliminatedなら、リスト順で宣言者の次の生存者
    - `A > Q` … 基本はChallengeした人。eliminatedなら次の生存者
    - `A == Q` … 基本は宣言者（この分岐では宣言者は罰を受けない）。いなければ次の生存者
-5. `resolveRound()`を呼ぶ
+5. `actionLog`にCHALLENGEエントリを追加（`round`は`currentRound`、`type`は`"CHALLENGE"`、`actualCount`にAの値、`challengeResult`に`"BIDDER_LOSES"`/`"CHALLENGER_LOSES"`/`"EXACT_MATCH"`、`penaltyDescription`に罰の説明文を記録）
+6. `resolveRound()`を呼ぶ
 
 `removeDice(Player p, int n)`（メソッド化推奨）
 
@@ -364,6 +387,7 @@ HTTPとの対応
    - `state`は`PLAYING`
    - `pendingOpeningPlayerId`を`players`のインデックスに直して`currentPlayerIndex`に書き込み、そのあと`pendingOpeningPlayerId = null`
    - IDが見つからない場合は最初の生存者のインデックスにする
+   - `currentRound`を+1し、`actionLog`に`ROUND_START`エントリを追加（先攻プレイヤーの情報を入れる）
 
 次ラウンド先攻のルールの文章は2章2.9（`pendingOpeningPlayerId`はその実装用の持ち場）。
 
@@ -510,7 +534,42 @@ Challengeの例
   },
   "hostPlayerId": "uuid",
   "winnerPlayerId": null,
-  "myDice": null
+  "myDice": null,
+  "actionLog": [
+    {
+      "round": 1,
+      "playerId": "uuid",
+      "playerName": "CPU 1",
+      "type": "BID",
+      "quantity": 3,
+      "face": 5,
+      "actualCount": null,
+      "challengeResult": null,
+      "penaltyDescription": null
+    },
+    {
+      "round": 1,
+      "playerId": "uuid",
+      "playerName": "CPU 2",
+      "type": "CHALLENGE",
+      "quantity": null,
+      "face": null,
+      "actualCount": 2,
+      "challengeResult": "BIDDER_LOSES",
+      "penaltyDescription": "CPU 1 がダイス1個失う"
+    },
+    {
+      "round": 2,
+      "playerId": "uuid",
+      "playerName": "CPU 1",
+      "type": "ROUND_START",
+      "quantity": null,
+      "face": null,
+      "actualCount": null,
+      "challengeResult": null,
+      "penaltyDescription": null
+    }
+  ]
 }
 ```
 
@@ -539,15 +598,16 @@ Challengeの例
 
 ## 9. DTO（Javaのクラス名の例）
 
-| クラス名             | 何に使うか                                                  |
-| -------------------- | ----------------------------------------------------------- |
-| `CreateGameRequest`  | `POST /games`の本文（`name`, `cpuCount`（1〜5の整数）など） |
-| `CreateGameResponse` | `gameId`, `playerId`                                        |
-| `JoinRequest`        | `name`                                                      |
-| `JoinResponse`       | `playerId`                                                  |
-| `StartRequest`       | `playerId`                                                  |
-| `ActionRequest`      | `type`, `playerId`, `quantity`, `face`                      |
-| `GameResponse`など   | `GET`の返却（8.5）                                          |
+| クラス名               | 何に使うか                                                  |
+| ---------------------- | ----------------------------------------------------------- |
+| `CreateGameRequest`    | `POST /games`の本文（`name`, `cpuCount`（1〜5の整数）など） |
+| `CreateGameResponse`   | `gameId`, `playerId`                                        |
+| `JoinRequest`          | `name`                                                      |
+| `JoinResponse`         | `playerId`                                                  |
+| `StartRequest`         | `playerId`                                                  |
+| `ActionRequest`        | `type`, `playerId`, `quantity`, `face`                      |
+| `GameResponse`など     | `GET`の返却（8.5）。`actionLog`を含む                       |
+| `TurnLogEntryResponse` | `actionLog`の各エントリ（6.5の`TurnLogEntry`に対応）        |
 
 ---
 
@@ -558,7 +618,7 @@ Challengeの例
 ### 10.1 方針
 
 - 進行中のゲームは`Map`など（例: ゲームID → `Game`）で保持する
-- `state`が`FINISHED`になったら、そのゲームをMapから削除してよい（＝状態をクリア。終わった卓はもう取り出せない想定）。削除はドメインの`Game`の中ではなく、`GameService`が`FINISHED`を確定したあとに`deleteById`するイメージ
+- `state`が`FINISHED`になっても、すぐにMapから削除しない。クライアントが最終状態（勝敗結果や`actionLog`）を`GET`で取得できるように、`FINISHED`のゲームはメモリに残す。クライアントが明示的に新しいゲームを作り直すか、サーバ再起動で消える想定でよい
 - サーバを再起動するとメモリは消えるので、進行中の卓も全部なくなる（この範囲の仕様ではそれでよい）
 
 ### 10.2 リポジトリでやること（メソッドの形）
@@ -618,3 +678,5 @@ src/main/java/com/bluff/
 ## 14. 仕様を変えたとき
 
 仕様を変えたら、日付と何を変えたかを1行ここかGitのコミットに残すと、みんなで食い違いが減る。
+
+- 2026-03-27: 行動履歴（`actionLog`）を追加。`TurnLogEntry`（6.5）、`Game`に`actionLog`/`currentRound`（6.1）、`bid`/`challenge`/`resolveRound`/`start`でのログ記録（7章）、APIレスポンスに`actionLog`（8.5）、DTO追加（9章）、FINISHED時の即時削除をやめた（10.1）。
