@@ -31,6 +31,15 @@ public class GameService {
         this.cpuStrategy = new CpuStrategy(random);
     }
 
+    public String joinGame(String gameId, String name) {
+        Game game = requireGame(gameId);
+        String playerId = UUID.randomUUID().toString();
+        String displayName = (name == null || name.isBlank()) ? "player" : name.trim();
+        game.join(playerId, displayName);
+        repository.save(game);
+        return playerId;
+    }
+
     public CreateGameResult createGame(String name, int cpuCount) {
         if (cpuCount < 1 || cpuCount > 5) {
             throw new IllegalArgumentException("cpuCount は 1 以上 5 以下の整数である必要があります");
