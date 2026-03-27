@@ -1,0 +1,196 @@
+package com.bluff.service;
+
+import com.bluff.cpu.SimpleCpuTurnExecutor;
+import com.bluff.model.Action;
+import com.bluff.model.Bid;
+import com.bluff.model.Game;
+import com.bluff.model.GameState;
+import com.bluff.model.Player;
+import com.bluff.repository.GameRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.UUID;
+
+@Service
+public class GameService {
+
+    private final GameRepository repository;
+    private final Random random;
+
+    @Autowired
+    public GameService(GameRepository repository) {
+        this(repository, new Random());
+    }
+
+    GameService(GameRepository repository, Random random) {
+        this.repository = repository;
+        this.random = random;
+    }
+
+    public CreateGameResult createGame(String name, int cpuCount) {
+        if (cpuCount < 1 || cpuCount > 5) {
+            throw new IllegalArgumentException("cpuCount は 1 以上 5 以下の整数である必要があります");
+        }
+        String displayName = (name == null || name.isBlank()) ? "player" : name.trim();
+        String gameId = UUID.randomUUID().toString();
+        String humanPlayerId = UUID.randomUUID().toString();
+        Game game = new Game(gameId, humanPlayerId);
+        for (int i = 1; i <= cpuCount; i++) {
+            game.getPlayers().add(new Player(UUID.randomUUID().toString(), "CPU " + i, true));
+        }
+        game.getPlayers().add(new Player(humanPlayerId, displayName, false));
+        repository.save(game);
+        return new CreateGameResult(gameId, humanPlayerId);
+    }
+
+    public void startGame(String gameId, String playerId) {
+        Game game = requireGame(gameId);
+        game.start(playerId);
+        repository.save(game);
+        runCpuUntilHumanOrFinished(game);
+    }
+
+    public void performAction(String gameId, Action action) {
+        Game game = requireGame(gameId);
+        switch (action.getType()) {
+            case JOIN, START -> throw new IllegalArgumentException("JOIN と START はこのエンドポイントでは受け付けません");
+            case BID -> {
+                if (action.getQuantity() == null || action.getFace() == null) {
+                    throw new IllegalArgumentException("BID には quantity と face が必要です");
+                }
+                game.bid(action.getPlayerId(), action.getQuantity(), action.getFace());
+            }
+            case CHALLENGE -> game.challenge(action.getPlayerId());
+        }
+        persistAfterMutation(game);
+    }
+
+    public GameDetailView getGame(String gameId, String viewerPlayerId) {
+        Game game = requireGame(gameId);
+        return toDetailView(game, viewerPlayerId);
+    }
+
+    public List<GameListItem> listGames() {
+        List<GameListItem> out = new ArrayList<>();
+        for (Game g : repository.findAll()) {
+            out.add(new GameListItem(g.getId(), g.getState().name(), g.getPlayers().size()));
+        }
+        return out;
+    }
+
+    void removeIfFinished(Game game) {
+        if (game.getState() == GameState.FINISHED) {
+            repository.deleteById(game.getId());
+        }
+    }
+
+    private void persistAfterMutation(Game game) {
+        if (game.getState() == GameState.FINISHED) {
+            repository.deleteById(game.getId());
+            return;
+        }
+        repository.save(game);
+        runCpuUntilHumanOrFinished(game);
+    }
+
+    private void runCpuUntilHumanOrFinished(Game game) {
+        while (game.getState() == GameState.PLAYING) {
+            Player current = game.getPlayers().get(game.getCurrentPlayerIndex());
+            if (!current.isCpu()) {
+                repository.save(game);
+                return;
+            }
+            SimpleCpuTurnExecutor.executeTurn(game, random);
+            if (game.getState() == GameState.FINISHED) {
+                repository.deleteById(game.getId());
+                return;
+            }
+            repository.save(game);
+        }
+        if (game.getState() == GameState.FINISHED) {
+            repository.deleteById(game.getId());
+        }
+    }
+
+    private Game requireGame(String gameId) {
+        Game game = repository.findById(gameId);
+        if (game == null) {
+            throw new GameNotFoundException(gameId);
+        }
+        return game;
+    }
+
+    private static GameDetailView toDetailView(Game game, String viewerPlayerId) {
+        List<PlayerSummary> players = new ArrayList<>();
+        for (Player p : game.getPlayers()) {
+            players.add(
+                    new PlayerSummary(
+                            p.getId(),
+                            p.getName(),
+                            p.isCpu(),
+                            p.getDice().size(),
+                            p.isEliminated()));
+        }
+        BidSnapshot bidSnap = null;
+        Bid bid = game.getCurrentBid();
+        if (bid != null) {
+            bidSnap = new BidSnapshot(bid.getQuantity(), bid.getFace(), bid.getPlayerId());
+        }
+        String currentPlayerId = null;
+        if (game.getState() == GameState.PLAYING && !game.getPlayers().isEmpty()) {
+            currentPlayerId = game.getPlayers().get(game.getCurrentPlayerIndex()).getId();
+        }
+        List<Integer> myDice = null;
+        if (viewerPlayerId != null) {
+            for (Player p : game.getPlayers()) {
+                if (p.getId().equals(viewerPlayerId)) {
+                    myDice = List.copyOf(p.getDice());
+                    break;
+                }
+            }
+        }
+        return new GameDetailView(
+                game.getId(),
+                game.getState().name(),
+                players,
+                currentPlayerId,
+                bidSnap,
+                game.getHostPlayerId(),
+                winnerPlayerId(game),
+                myDice);
+    }
+
+    private static String winnerPlayerId(Game game) {
+        if (game.getState() != GameState.FINISHED) {
+            return null;
+        }
+        for (Player p : game.getPlayers()) {
+            if (!p.isEliminated()) {
+                return p.getId();
+            }
+        }
+        return null;
+    }
+
+    public record CreateGameResult(String gameId, String playerId) {}
+
+    public record GameListItem(String id, String state, int playerCount) {}
+
+    public record PlayerSummary(String id, String name, boolean cpu, int diceCount, boolean eliminated) {}
+
+    public record BidSnapshot(Integer quantity, Integer face, String playerId) {}
+
+    public record GameDetailView(
+            String id,
+            String state,
+            List<PlayerSummary> players,
+            String currentPlayerId,
+            BidSnapshot currentBid,
+            String hostPlayerId,
+            String winnerPlayerId,
+            List<Integer> myDice) {}
+}
