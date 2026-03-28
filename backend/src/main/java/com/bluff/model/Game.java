@@ -14,6 +14,8 @@ public class Game {
     private String lastBidPlayerId;
     private String hostPlayerId;
     private String pendingOpeningPlayerId;
+    private List<TurnLogEntry> actionLog;
+    private int currentRound;
 
     public Game(String id, String hostPlayerId) {
         this.id = id;
@@ -24,6 +26,8 @@ public class Game {
         this.lastBidPlayerId = null;
         this.hostPlayerId = hostPlayerId;
         this.pendingOpeningPlayerId = null;
+        this.actionLog = new ArrayList<>();
+        this.currentRound = 0;
     }
 
     public String getId() {
@@ -76,6 +80,14 @@ public class Game {
 
     public void setPendingOpeningPlayerId(String pendingOpeningPlayerId) {
         this.pendingOpeningPlayerId = pendingOpeningPlayerId;
+    }
+
+    public List<TurnLogEntry> getActionLog() {
+        return actionLog;
+    }
+
+    public int getCurrentRound() {
+        return currentRound;
     }
 
     // ゲーム参加
