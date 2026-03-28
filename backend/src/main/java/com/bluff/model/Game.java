@@ -135,6 +135,8 @@ public class Game {
         setCurrentBid(null);
         setLastBidPlayerId(null);
         setPendingOpeningPlayerId(null);
+        actionLog.clear();
+        currentRound = 1;
     }
 
     public void bid(String playerId, int quantity, int face) {
@@ -155,6 +157,8 @@ public class Game {
         }
         setCurrentBid(nextBid);
         setLastBidPlayerId(playerId);
+        Player actor = players.get(idx);
+        actionLog.add(TurnLogEntry.bid(currentRound, playerId, actor.getName(), quantity, face));
         nextTurn();
     }
 
@@ -241,6 +245,23 @@ public class Game {
         } else {
             pendingOpeningPlayerId = null;
         }
+
+        Player challenger = requirePlayer(playerId);
+        String challengeResult;
+        String penaltyDescription;
+        if (a < q) {
+            challengeResult = "BIDDER_LOSES";
+            penaltyDescription = bidder.getName() + " がダイス" + (q - a) + "個失う";
+        } else if (a > q) {
+            challengeResult = "CHALLENGER_LOSES";
+            penaltyDescription = challenger.getName() + " がダイス" + (a - q) + "個失う";
+        } else {
+            challengeResult = "EXACT_MATCH";
+            penaltyDescription = "宣言者以外の全員がダイス1個ずつ失う";
+        }
+        actionLog.add(
+                TurnLogEntry.challenge(currentRound, playerId, challenger.getName(), a, challengeResult, penaltyDescription));
+
         resolveRound();
     }
 
@@ -285,6 +306,10 @@ public class Game {
         }
         currentPlayerIndex = openerIdx;
         pendingOpeningPlayerId = null;
+
+        currentRound++;
+        Player opener = players.get(currentPlayerIndex);
+        actionLog.add(TurnLogEntry.roundStart(currentRound, opener.getId(), opener.getName()));
     }
 
     private void removeDice(Player p, int n) {
