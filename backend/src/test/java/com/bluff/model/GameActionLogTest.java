@@ -36,6 +36,33 @@ class GameActionLogTest {
         assertThat(e.getPlayerName()).isEqualTo("Host");
         assertThat(e.getQuantity()).isEqualTo(2);
         assertThat(e.getFace()).isEqualTo(3);
+        assertThat(e.getActualCount()).isNull();
+        assertThat(e.getChallengeResult()).isNull();
+        assertThat(e.getPenaltyDescription()).isNull();
+    }
+
+    @Test
+    void multiple_bids_accumulateInActionLog() {
+        Game g = newGameTwoPlayers();
+        g.start("h1");
+        g.bid("h1", 1, 1);
+        g.bid("p2", 2, 1);
+
+        assertThat(g.getActionLog()).hasSize(2);
+        TurnLogEntry first = g.getActionLog().get(0);
+        TurnLogEntry second = g.getActionLog().get(1);
+        assertThat(first.getType()).isEqualTo(TurnLogEntry.TYPE_BID);
+        assertThat(first.getRound()).isEqualTo(1);
+        assertThat(first.getPlayerId()).isEqualTo("h1");
+        assertThat(first.getPlayerName()).isEqualTo("Host");
+        assertThat(first.getQuantity()).isEqualTo(1);
+        assertThat(first.getFace()).isEqualTo(1);
+        assertThat(second.getType()).isEqualTo(TurnLogEntry.TYPE_BID);
+        assertThat(second.getRound()).isEqualTo(1);
+        assertThat(second.getPlayerId()).isEqualTo("p2");
+        assertThat(second.getPlayerName()).isEqualTo("Bob");
+        assertThat(second.getQuantity()).isEqualTo(2);
+        assertThat(second.getFace()).isEqualTo(1);
     }
 
     @Test
@@ -48,6 +75,9 @@ class GameActionLogTest {
         g.challenge("p2");
 
         TurnLogEntry ch = lastChallengeEntry(g);
+        assertThat(ch.getRound()).isEqualTo(1);
+        assertThat(ch.getQuantity()).isNull();
+        assertThat(ch.getFace()).isNull();
         assertThat(ch.getChallengeResult()).isEqualTo("BIDDER_LOSES");
         assertThat(ch.getActualCount()).isEqualTo(0);
         assertThat(ch.getPenaltyDescription()).isEqualTo("Host がダイス3個失う");
@@ -65,6 +95,7 @@ class GameActionLogTest {
         g.challenge("p2");
 
         TurnLogEntry ch = lastChallengeEntry(g);
+        assertThat(ch.getRound()).isEqualTo(1);
         assertThat(ch.getChallengeResult()).isEqualTo("CHALLENGER_LOSES");
         assertThat(ch.getActualCount()).isEqualTo(10);
         assertThat(ch.getPenaltyDescription()).isEqualTo("Bob がダイス9個失う");
@@ -80,6 +111,7 @@ class GameActionLogTest {
         g.challenge("p2");
 
         TurnLogEntry ch = lastChallengeEntry(g);
+        assertThat(ch.getRound()).isEqualTo(1);
         assertThat(ch.getChallengeResult()).isEqualTo("EXACT_MATCH");
         assertThat(ch.getActualCount()).isEqualTo(2);
         assertThat(ch.getPenaltyDescription()).isEqualTo("宣言者以外の全員がダイス1個ずつ失う");
@@ -97,6 +129,8 @@ class GameActionLogTest {
         TurnLogEntry last = g.getActionLog().get(g.getActionLog().size() - 1);
         assertThat(last.getType()).isEqualTo(TurnLogEntry.TYPE_ROUND_START);
         assertThat(last.getRound()).isEqualTo(2);
+        assertThat(last.getPlayerId()).isEqualTo("h1");
+        assertThat(last.getPlayerName()).isEqualTo("Host");
         assertThat(g.getState()).isEqualTo(GameState.PLAYING);
     }
 
