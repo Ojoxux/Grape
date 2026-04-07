@@ -92,7 +92,8 @@ class GameApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.players").isArray())
                 .andExpect(jsonPath("$.players[0].diceCount").exists())
-                .andExpect(jsonPath("$.players[0].dice").doesNotExist());
+                .andExpect(jsonPath("$.players[0].dice").doesNotExist())
+                .andExpect(jsonPath("$.actionLog").isArray());
     }
 
     @Test

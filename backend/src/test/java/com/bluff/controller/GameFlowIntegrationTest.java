@@ -216,20 +216,40 @@ class GameFlowIntegrationTest {
     }
 
     @Test
-    void finished_gameRemovedFromList() throws Exception {
+    void finished_gameStillGettableWithActionLogAndListed() throws Exception {
         CreatedGame cg = createGame(1);
         start(cg.gameId(), cg.humanPlayerId());
 
-        boolean gone = false;
+        boolean finished = false;
         for (int iter = 0; iter < 800; iter++) {
             MvcResult getRes =
                     mockMvc.perform(get("/games/" + cg.gameId()).param("viewerPlayerId", cg.humanPlayerId()))
+                            .andExpect(status().isOk())
                             .andReturn();
-            if (getRes.getResponse().getStatus() == 404) {
-                gone = true;
+            JsonNode g = objectMapper.readTree(getRes.getResponse().getContentAsString());
+            assertThat(g.has("actionLog")).isTrue();
+            assertThat(g.get("actionLog").isArray()).isTrue();
+
+            if ("FINISHED".equals(g.get("state").asText())) {
+                assertThat(g.get("actionLog").size()).isGreaterThan(0);
+                mockMvc.perform(get("/games/" + cg.gameId()).param("viewerPlayerId", cg.humanPlayerId()))
+                        .andExpect(status().isOk());
+
+                MvcResult listRes = mockMvc.perform(get("/games")).andExpect(status().isOk()).andReturn();
+                JsonNode arr = objectMapper.readTree(listRes.getResponse().getContentAsString());
+                boolean found = false;
+                for (JsonNode e : arr) {
+                    if (cg.gameId().equals(e.get("id").asText())) {
+                        found = true;
+                        assertThat(e.get("state").asText()).isEqualTo("FINISHED");
+                        break;
+                    }
+                }
+                assertThat(found).isTrue();
+                finished = true;
                 break;
             }
-            JsonNode g = objectMapper.readTree(getRes.getResponse().getContentAsString());
+
             assertThat(g.get("currentPlayer").asText()).isEqualTo(cg.humanPlayerId());
 
             JsonNode cb = g.get("currentBid");
@@ -242,15 +262,7 @@ class GameFlowIntegrationTest {
                 performBid(cg.gameId(), cg.humanPlayerId(), legal[0], legal[1]);
             }
         }
-        assertThat(gone).as("game should end and be removed within iteration budget").isTrue();
-
-        mockMvc.perform(get("/games/" + cg.gameId())).andExpect(status().isNotFound());
-
-        MvcResult listRes = mockMvc.perform(get("/games")).andExpect(status().isOk()).andReturn();
-        JsonNode arr = objectMapper.readTree(listRes.getResponse().getContentAsString());
-        for (JsonNode e : arr) {
-            assertThat(e.get("id").asText()).isNotEqualTo(cg.gameId());
-        }
+        assertThat(finished).as("game should finish within iteration budget").isTrue();
     }
 
     private CreatedGame createGame(int cpuCount) throws Exception {
