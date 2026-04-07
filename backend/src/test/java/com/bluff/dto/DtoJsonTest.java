@@ -72,7 +72,8 @@ class DtoJsonTest {
                         new BidResponse(2, 3, "p0"),
                         "host",
                         null,
-                        List.of(1, 2, 6));
+                        List.of(1, 2, 6),
+                        List.of());
         String json = mapper.writeValueAsString(gr);
         JsonNode root = mapper.readTree(json);
         assertThat(root.path("players").path(0).has("diceCount")).isTrue();
