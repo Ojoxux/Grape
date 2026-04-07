@@ -2,6 +2,7 @@ package com.bluff.service;
 
 import com.bluff.model.Action;
 import com.bluff.model.ActionType;
+import com.bluff.model.Bid;
 import com.bluff.model.Game;
 import com.bluff.model.GameState;
 import com.bluff.repository.InMemoryGameRepository;
@@ -41,15 +42,33 @@ class GameServiceTest {
     }
 
     @Test
-    void removeIfFinished_deletesFromRepository() {
+    void finishedGame_staysInRepository() {
         InMemoryGameRepository repo = new InMemoryGameRepository();
         GameService svc = new GameService(repo);
         var created = svc.createGame("p", 1);
         Game game = repo.findById(created.gameId());
         game.setState(GameState.FINISHED);
         repo.save(game);
-        svc.removeIfFinished(game);
-        assertThat(repo.findById(created.gameId())).isNull();
+        assertThat(repo.findById(created.gameId())).isNotNull();
+    }
+
+    @Test
+    void getGame_includesActionLogAfterStartAndBid() {
+        InMemoryGameRepository repo = new InMemoryGameRepository();
+        GameService svc = new GameService(repo, deterministicNoChallenge());
+        var created = svc.createGame("me", 1);
+        svc.startGame(created.gameId(), created.playerId());
+        Game game = repo.findById(created.gameId());
+        Bid cur = game.getCurrentBid();
+        assertThat(cur).isNotNull();
+        int[] legal = nextLegalBidForHuman(cur, created.playerId());
+        svc.performAction(
+                created.gameId(),
+                new Action(ActionType.BID, created.playerId(), legal[0], legal[1]));
+        GameService.GameDetailView view = svc.getGame(created.gameId(), created.playerId());
+        assertThat(view.actionLog()).isNotEmpty();
+        assertThat(view.actionLog().stream().anyMatch(e -> "BID".equals(e.type()) && created.playerId().equals(e.playerId())))
+                .isTrue();
     }
 
     @Test
@@ -111,5 +130,19 @@ class GameServiceTest {
                 return 0.99;
             }
         };
+    }
+
+    private static int[] nextLegalBidForHuman(Bid currentBid, String humanPlayerId) {
+        int q = currentBid.getQuantity();
+        int f = currentBid.getFace();
+        Bid prev = new Bid(q, f, currentBid.getPlayerId());
+        for (int nq = 1; nq <= q + 60; nq++) {
+            for (int nf = 1; nf <= 6; nf++) {
+                if (Game.isValidBidAfter(prev, new Bid(nq, nf, humanPlayerId))) {
+                    return new int[] {nq, nf};
+                }
+            }
+        }
+        throw new IllegalStateException("no legal bid found");
     }
 }

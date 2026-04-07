@@ -6,6 +6,7 @@ import com.bluff.model.Bid;
 import com.bluff.model.Game;
 import com.bluff.model.GameState;
 import com.bluff.model.Player;
+import com.bluff.model.TurnLogEntry;
 import com.bluff.repository.GameRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -91,17 +92,7 @@ public class GameService {
         return out;
     }
 
-    void removeIfFinished(Game game) {
-        if (game.getState() == GameState.FINISHED) {
-            repository.deleteById(game.getId());
-        }
-    }
-
     private void persistAfterMutation(Game game) {
-        if (game.getState() == GameState.FINISHED) {
-            repository.deleteById(game.getId());
-            return;
-        }
         repository.save(game);
         runCpuUntilHumanOrFinished(game);
     }
@@ -114,14 +105,10 @@ public class GameService {
                 return;
             }
             cpuStrategy.executeTurn(game);
-            if (game.getState() == GameState.FINISHED) {
-                repository.deleteById(game.getId());
-                return;
-            }
             repository.save(game);
         }
         if (game.getState() == GameState.FINISHED) {
-            repository.deleteById(game.getId());
+            repository.save(game);
         }
     }
 
@@ -162,6 +149,10 @@ public class GameService {
                 }
             }
         }
+        List<TurnLogSnapshot> actionLog = new ArrayList<>();
+        for (TurnLogEntry e : game.getActionLog()) {
+            actionLog.add(TurnLogSnapshot.from(e));
+        }
         return new GameDetailView(
                 game.getId(),
                 game.getState().name(),
@@ -170,7 +161,8 @@ public class GameService {
                 bidSnap,
                 game.getHostPlayerId(),
                 winnerPlayerId(game),
-                myDice);
+                myDice,
+                List.copyOf(actionLog));
     }
 
     private static String winnerPlayerId(Game game) {
@@ -193,6 +185,31 @@ public class GameService {
 
     public record BidSnapshot(Integer quantity, Integer face, String playerId) {}
 
+    public record TurnLogSnapshot(
+            int round,
+            String playerId,
+            String playerName,
+            String type,
+            Integer quantity,
+            Integer face,
+            Integer actualCount,
+            String challengeResult,
+            String penaltyDescription) {
+
+        static TurnLogSnapshot from(TurnLogEntry e) {
+            return new TurnLogSnapshot(
+                    e.getRound(),
+                    e.getPlayerId(),
+                    e.getPlayerName(),
+                    e.getType(),
+                    e.getQuantity(),
+                    e.getFace(),
+                    e.getActualCount(),
+                    e.getChallengeResult(),
+                    e.getPenaltyDescription());
+        }
+    }
+
     public record GameDetailView(
             String id,
             String state,
@@ -201,5 +218,6 @@ public class GameService {
             BidSnapshot currentBid,
             String hostPlayerId,
             String winnerPlayerId,
-            List<Integer> myDice) {}
+            List<Integer> myDice,
+            List<TurnLogSnapshot> actionLog) {}
 }

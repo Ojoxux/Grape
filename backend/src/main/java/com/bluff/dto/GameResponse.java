@@ -10,4 +10,5 @@ public record GameResponse(
         BidResponse currentBid,
         String hostPlayerId,
         String winnerPlayerId,
-        List<Integer> myDice) {}
+        List<Integer> myDice,
+        List<TurnLogEntryResponse> actionLog) {}

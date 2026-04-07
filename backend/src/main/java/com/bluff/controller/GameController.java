@@ -10,6 +10,7 @@ import com.bluff.dto.JoinRequest;
 import com.bluff.dto.JoinResponse;
 import com.bluff.dto.PlayerResponse;
 import com.bluff.dto.StartRequest;
+import com.bluff.dto.TurnLogEntryResponse;
 import com.bluff.model.Action;
 import com.bluff.service.GameService;
 import org.springframework.http.HttpStatus;
@@ -92,6 +93,20 @@ public class GameController {
         if (snap != null) {
             bid = new BidResponse(snap.quantity(), snap.face(), snap.playerId());
         }
+        List<TurnLogEntryResponse> actionLog = new ArrayList<>();
+        for (GameService.TurnLogSnapshot e : v.actionLog()) {
+            actionLog.add(
+                    new TurnLogEntryResponse(
+                            e.round(),
+                            e.playerId(),
+                            e.playerName(),
+                            e.type(),
+                            e.quantity(),
+                            e.face(),
+                            e.actualCount(),
+                            e.challengeResult(),
+                            e.penaltyDescription()));
+        }
         return new GameResponse(
                 v.id(),
                 v.state(),
@@ -100,6 +115,7 @@ public class GameController {
                 bid,
                 v.hostPlayerId(),
                 v.winnerPlayerId(),
-                v.myDice());
+                v.myDice(),
+                actionLog);
     }
 }
