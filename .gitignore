@@ -40,3 +40,6 @@ out/
 
 ### OS
 .DS_Store
+
+### docs
+docs/issues
