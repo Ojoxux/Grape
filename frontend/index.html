@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>BLUFF — test UI</title>
+    </head>
+    <body>
+        <h1>BLUFF（テスト用）</h1>
+
+        <fieldset>
+            <legend>接続</legend>
+            <label>
+                API のベース URL
+                <input
+                    type="url"
+                    id="apiBase"
+                    value="http://localhost:8080"
+                    size="40"
+                />
+            </label>
+        </fieldset>
+
+        <fieldset id="setupPanel">
+            <legend>ゲーム作成（対 CPU）</legend>
+            <label>
+                表示名
+                <input type="text" id="playerName" placeholder="player" />
+            </label>
+            <label>
+                CPU の人数（1〜5）
+                <select id="cpuCount"></select>
+            </label>
+            <button type="button" id="createBtn">ゲームを作る</button>
+        </fieldset>
+
+        <fieldset id="lobbyPanel" hidden>
+            <legend>ロビー</legend>
+            <p><strong>gameId</strong> <code id="gameIdOut"></code></p>
+            <p>
+                <strong>playerId</strong>（あなた）
+                <code id="playerIdOut"></code>
+            </p>
+            <button type="button" id="startBtn">スタート</button>
+        </fieldset>
+
+        <fieldset id="playPanel" hidden>
+            <legend>卓</legend>
+            <p id="statusLine"></p>
+            <p id="winnerLine" hidden></p>
+            <div id="playersBox"></div>
+            <p id="myDiceLine"></p>
+            <p id="bidLine"></p>
+
+            <div id="actionLogBox" class="action-log" hidden>
+                <h2 class="action-log-title">行動履歴</h2>
+                <div id="actionLogContent" class="action-log-content"></div>
+            </div>
+
+            <div id="actionBox" hidden>
+                <p>あなたの番です。</p>
+                <label>
+                    個数
+                    <input type="number" id="bidQty" min="1" value="1" />
+                </label>
+                <label>
+                    面（1〜5 / 6=STAR）
+                    <input
+                        type="number"
+                        id="bidFace"
+                        min="1"
+                        max="6"
+                        value="1"
+                    />
+                </label>
+                <button type="button" id="bidBtn">Bid</button>
+                <button type="button" id="challengeBtn">Challenge</button>
+            </div>
+
+            <button type="button" id="refreshBtn">状態を再取得</button>
+        </fieldset>
+
+        <p id="errorLine" class="error" hidden></p>
+        <p id="infoLine" class="hint" hidden></p>
+
+        <script type="module" src="/src/main.js"></script>
+    </body>
+</html>

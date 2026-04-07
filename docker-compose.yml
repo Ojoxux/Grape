@@ -11,3 +11,12 @@ services:
       - ./backend/src:/app/src
       - ./backend/build.gradle:/app/build.gradle
       - ./backend/settings.gradle:/app/settings.gradle
+
+  bluff-fe:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - bluff-bb

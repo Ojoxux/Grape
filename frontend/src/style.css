@@ -1,0 +1,98 @@
+body {
+  font-family: system-ui, sans-serif;
+  max-width: 52rem;
+  margin: 1rem auto;
+  padding: 0 1rem;
+  line-height: 1.45;
+}
+
+fieldset {
+  margin-bottom: 1rem;
+}
+
+label {
+  display: inline-block;
+  margin-right: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+button {
+  margin-right: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.hint {
+  color: #444;
+  font-size: 0.9rem;
+}
+
+.error {
+  color: #a00;
+  white-space: pre-wrap;
+}
+
+code {
+  font-size: 0.95em;
+  word-break: break-all;
+}
+
+#playersBox table {
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+#playersBox th,
+#playersBox td {
+  border: 1px solid #999;
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+}
+
+.action-log {
+  margin-top: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid #ccc;
+}
+
+.action-log-title {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.action-log-content {
+  font-size: 0.9rem;
+  max-height: 22rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.action-log-round {
+  margin: 0.65rem 0 0.35rem;
+  padding: 0.35rem 0.5rem;
+  background: #e8e8e8;
+  border-radius: 4px;
+  font-weight: 600;
+  color: #222;
+}
+
+.action-log-entry {
+  margin: 0.25rem 0;
+  padding: 0.2rem 0.35rem;
+  border-left: 3px solid #888;
+  padding-left: 0.5rem;
+}
+
+.action-log-entry.bid {
+  border-left-color: #2a6;
+}
+
+.action-log-entry.challenge {
+  border-left-color: #a62;
+}
+
+.action-log-penalty {
+  margin: 0.15rem 0 0 0.5rem;
+  color: #444;
+  font-size: 0.88em;
+}
