@@ -43,3 +43,6 @@ out/
 
 ### docs
 docs/issues
+
+### Local certs
+certs/
