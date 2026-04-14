@@ -1,0 +1,59 @@
+version: '3'
+
+vars:
+  COMPOSE_FILE: docker-compose.yml
+
+tasks:
+  default:
+    desc: タスク一覧を表示
+    cmds:
+      - task -l
+
+  up:
+    desc: スタックを起動（バックグラウンド、必要ならビルド）
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} up -d --build
+
+  down:
+    desc: コンテナを停止・削除
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} down
+
+  build:
+    desc: イメージをビルド
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} build
+
+  rebuild:
+    desc: キャッシュなしでビルドしてから起動
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} build --no-cache
+      - docker compose -f {{.COMPOSE_FILE}} up -d
+
+  logs:
+    desc: 全サービスのログを追跡
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} logs -f
+
+  ps:
+    desc: 起動中のコンテナ一覧
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} ps
+
+  clean:
+    desc: 停止し、ボリュームも削除
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} down -v
+
+  backend-build:
+    desc: ホストで Gradle ビルド（JAR）
+    dir: backend
+    cmds:
+      - ./gradlew build
+
+  frontend-build:
+    desc: ホストで npm ビルド（Vite の静的成果物）
+    dir: frontend
+    cmds:
+      - npm ci
+      - npm run build
