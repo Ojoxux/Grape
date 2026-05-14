@@ -84,7 +84,8 @@ public final class CpuStrategy {
     private static List<Bid> collectLegalBids(Game game, Player cpuPlayer, Bid prev) {
         String pid = cpuPlayer.getId();
         List<Bid> out = new ArrayList<>();
-        int maxQ = totalSurvivorDiceCount(game) + 12;
+        // 生存ダイス総数を超える quantity は実現不可能で、次の人間ターンで上乗せできず409を誘発するため上限とした
+        int maxQ = totalSurvivorDiceCount(game);
         for (int q = 1; q <= maxQ; q++) {
             for (int f = 1; f <= 6; f++) {
                 Bid next = new Bid(q, f, pid);
