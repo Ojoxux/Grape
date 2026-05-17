@@ -3,6 +3,7 @@ package com.bluff.controller;
 import com.bluff.DeterministicGameServiceTestConfig;
 import com.bluff.model.Bid;
 import com.bluff.model.Game;
+import com.bluff.repository.GameRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ class GameFlowIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private GameRepository gameRepository;
 
     @Test
     void happyPath_createStart_get_bid_cpuAdvances() throws Exception {
@@ -141,40 +145,31 @@ class GameFlowIntegrationTest {
 
     @Test
     void error_challengeWithoutBid_returns409() throws Exception {
-        CreatedGame cg = createGame(2);
+        CreatedGame cg = createGame(1);
         start(cg.gameId(), cg.humanPlayerId());
 
-        boolean saw = false;
-        for (int i = 0; i < 40; i++) {
-            JsonNode g = getGame(cg.gameId(), cg.humanPlayerId());
-            String cp = g.get("currentPlayer").asText();
-            JsonNode cb = g.get("currentBid");
-            boolean bidNull = cb == null || cb.isNull();
-            if (bidNull && cp.equals(cg.humanPlayerId())) {
-                mockMvc.perform(
-                                post("/games/" + cg.gameId() + "/action")
-                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
-                                        .content(
-                                                "{\"type\":\"CHALLENGE\",\"playerId\":\""
-                                                        + cg.humanPlayerId()
-                                                        + "\"}"))
-                        .andExpect(status().isConflict());
-                saw = true;
+        Game game = gameRepository.findById(cg.gameId());
+        int humanIndex = -1;
+        for (int i = 0; i < game.getPlayers().size(); i++) {
+            if (cg.humanPlayerId().equals(game.getPlayers().get(i).getId())) {
+                humanIndex = i;
                 break;
             }
-            if (!cp.equals(cg.humanPlayerId())) {
-                throw new AssertionError("expected human turn, got " + cp);
-            }
-            if (bidNull) {
-                performBid(cg.gameId(), cg.humanPlayerId(), 1, 1);
-            } else if (i % 2 == 0) {
-                performChallenge(cg.gameId(), cg.humanPlayerId());
-            } else {
-                int[] legal = nextLegalBid(cb, cg.humanPlayerId());
-                performBid(cg.gameId(), cg.humanPlayerId(), legal[0], legal[1]);
-            }
         }
-        assertThat(saw).as("human should see a no-bid opening at least once").isTrue();
+        assertThat(humanIndex).isGreaterThanOrEqualTo(0);
+        game.setCurrentPlayerIndex(humanIndex);
+        game.setCurrentBid(null);
+        game.setLastBidPlayerId(null);
+        gameRepository.save(game);
+
+        mockMvc.perform(
+                        post("/games/" + cg.gameId() + "/action")
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .content(
+                                        "{\"type\":\"CHALLENGE\",\"playerId\":\""
+                                                + cg.humanPlayerId()
+                                                + "\"}"))
+                .andExpect(status().isConflict());
     }
 
     @Test

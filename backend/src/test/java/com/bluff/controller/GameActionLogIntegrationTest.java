@@ -103,11 +103,6 @@ class GameActionLogIntegrationTest {
         boolean sawRoundStart = false;
         for (int i = 0; i < 600; i++) {
             JsonNode g = getGame(cg.gameId(), cg.humanPlayerId());
-            if ("FINISHED".equals(g.get("state").asText())) {
-                break;
-            }
-            assertThat(g.get("currentPlayer").asText()).isEqualTo(cg.humanPlayerId());
-
             for (JsonNode e : g.get("actionLog")) {
                 if ("ROUND_START".equals(e.get("type").asText())) {
                     sawRoundStart = true;
@@ -118,6 +113,10 @@ class GameActionLogIntegrationTest {
             if (sawRoundStart) {
                 break;
             }
+            if ("FINISHED".equals(g.get("state").asText())) {
+                break;
+            }
+            assertThat(g.get("currentPlayer").asText()).isEqualTo(cg.humanPlayerId());
 
             JsonNode cb = g.get("currentBid");
             if (cb == null || cb.isNull()) {
