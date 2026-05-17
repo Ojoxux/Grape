@@ -80,6 +80,33 @@ class CpuStrategyTest {
     }
 
     @Test
+    void followUpBid_neverExceedsTotalSurvivorDiceCount() {
+        Player cpu = new Player("cpu", "CPU 1", true);
+        cpu.setDice(List.of(3, 3, 3, 3, 3));
+        Player human = stubHuman();
+        int totalDiceCount = cpu.getDice().size() + human.getDice().size();
+        Game game = minimalPlayingGame(cpu, human);
+        Bid prev = new Bid(totalDiceCount, 5, human.getId());
+        game.setCurrentBid(prev);
+        game.setLastBidPlayerId(human.getId());
+        game.setCurrentPlayerIndex(0);
+
+        Random pickLargestCandidate =
+                new Random() {
+                    @Override
+                    public int nextInt(int bound) {
+                        return bound - 1;
+                    }
+                };
+        CpuStrategy strategy = new CpuStrategy(pickLargestCandidate);
+        CpuStrategy.Decision d = strategy.decideAction(game, cpu);
+
+        assertThat(d).isInstanceOf(CpuStrategy.Decision.Bid.class);
+        CpuStrategy.Decision.Bid bid = (CpuStrategy.Decision.Bid) d;
+        assertThat(bid.quantity()).isLessThanOrEqualTo(totalDiceCount);
+    }
+
+    @Test
     void decideAction_rejectsNonCpuPlayer() {
         Player human = stubHuman();
         Game game = minimalPlayingGame(new Player("cpu", "CPU", true), human);
