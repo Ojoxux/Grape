@@ -21,6 +21,7 @@ public class GameService {
 
     private final GameRepository repository;
     private final CpuStrategy cpuStrategy;
+    private final Random random;
 
     @Autowired
     public GameService(GameRepository repository) {
@@ -29,6 +30,7 @@ public class GameService {
 
     public GameService(GameRepository repository, Random random) {
         this.repository = repository;
+        this.random = random;
         this.cpuStrategy = new CpuStrategy(random);
     }
 
@@ -48,7 +50,7 @@ public class GameService {
         String displayName = (name == null || name.isBlank()) ? "player" : name.trim();
         String gameId = UUID.randomUUID().toString();
         String humanPlayerId = UUID.randomUUID().toString();
-        Game game = new Game(gameId, humanPlayerId);
+        Game game = new Game(gameId, humanPlayerId, random);
         for (int i = 1; i <= cpuCount; i++) {
             game.getPlayers().add(new Player(UUID.randomUUID().toString(), "CPU " + i, true));
         }
